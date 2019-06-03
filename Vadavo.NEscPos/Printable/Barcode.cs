@@ -1,13 +1,20 @@
-﻿using System.Linq;
-using System.Text;
+﻿using System;
+using System.Linq;
+using Vadavo.NEscPos.Helpers;
 
 namespace Vadavo.NEscPos.Printable
 {
     public enum BarcodeType
     {
-        UpcA, UpcE, Ean12, Ean8, Code39, I25, Codebar, Code93, Code128, Code11, MSI
+        UpcA, UpcE, Ean13, Ean8, Code39, I25, Codebar, Code93, Code128, Code11, Msi
     }
 
+    /// <summary>
+    ///     A barcode printable implementation.
+    /// </summary>
+    /// <remarks>
+    ///     This printable type reset the printer.
+    /// </remarks>
     public class Barcode : IPrintable
     {
         private readonly string _content;
@@ -21,13 +28,37 @@ namespace Vadavo.NEscPos.Printable
             _type = type;
         }
 
-        public byte[] GetBytes() =>
-            new Reset().GetBytes() // Reset
-                .Concat(new Justification(JustificationType.Center).GetBytes()) // Center
-                .Concat(new[] { (byte)Control.GroupSeparator, (byte)'h', (byte)_height }) // Set barcode height
-                .Concat(new[] { (byte)Control.GroupSeparator, (byte)'k', (byte)_type } // Set barcode type
-                .Concat(Encoding.UTF8.GetBytes(_content)).Concat(new[] { (byte) 0, (byte) _content.Length, (byte) 0 })) // Set barcode content.
-                .Concat(new Reset().GetBytes()) // Reset
+        public byte[] GetBytes()
+        {
+            return new PrintableBuilder()
+                .Add(new Reset())
+                .Add(new[] {(byte) Control.GroupSeparator, (byte) 'h', (byte) _height})
+                .Add(new[] {(byte) Control.GroupSeparator, (byte) 'k', (byte) _type, (byte) _content.Length})
+                .Add(_content.ToCharArray().Select(e => (byte) e))
+                .Add(new[] {(byte) 0, (byte) _content.Length, (byte) 0})
+                .Add(new Reset())
                 .ToArray();
+        }
+    }
+
+    public static class BarcodeExtensions
+    {
+        public static void PrintBarcode(this IPrinter printer, string content, int height = 32,
+            BarcodeType barcodeType = BarcodeType.Code128)
+        {
+            if (printer == null)
+                throw new ArgumentNullException(nameof(printer));
+            
+            printer.Print(new Barcode(content, height, barcodeType));
+        }
+
+        public static PrintableBuilder AddBarcode(this PrintableBuilder builder, string content = "", int height = 32,
+            BarcodeType barcodeType = BarcodeType.Code128)
+        {
+            if (builder == null)
+                throw new ArgumentNullException(nameof(builder));
+
+            return builder.Add(new Barcode(content, height, barcodeType));
+        }
     }
 }

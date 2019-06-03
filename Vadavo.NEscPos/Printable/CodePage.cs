@@ -1,19 +1,69 @@
-﻿namespace Vadavo.NEscPos.Printable
+using System;
+using Vadavo.NEscPos.Helpers;
+
+namespace Vadavo.NEscPos.Printable
 {
-    public enum CodePageType
+    public enum CodePage
     {
         Default = 0,
-        Cp437 = 1,
-        Cp858 = 2,
-        Cp852 = 3,
+        Pc437 = 0,
+        Katakana = 1,
+        Pc850 = 2,
+        Pc860 = 3
+    }
+    
+    public class SetCodePage : IPrintable
+    {
+        private readonly byte _codePage;
+        
+        public SetCodePage(CodePage codePage)
+        {
+            _codePage = (byte) codePage;
+        }
+
+        public SetCodePage(byte codePage)
+        {
+            _codePage = codePage;
+        }
+
+        public byte[] GetBytes()
+        {
+            return new[] {(byte) Control.Escape, (byte) 't', _codePage};
+        }
     }
 
-    public class CodePage : IPrintable
+    public static class CodePageExtensions
     {
-        private readonly CodePageType _type;
+        public static void SetCodePage(this IPrinter printer, CodePage codePage)
+        {
+            if (printer == null)
+                throw new ArgumentNullException(nameof(printer));
+            
+            printer.Print(new SetCodePage(codePage));
+        }
 
-        public CodePage(CodePageType type = CodePageType.Default) => _type = type;
+        public static void SetCodePage(this IPrinter printer, byte codePage)
+        {
+            if (printer == null)
+                throw new ArgumentNullException(nameof(printer));
+            
+            printer.Print(new SetCodePage(codePage));
+        }
 
-        public byte[] GetBytes() => new[] {(byte) Control.Escape, (byte) Control.GroupSeparator, (byte) 't', (byte) _type};
+        public static PrintableBuilder SetCodePage(this PrintableBuilder builder, CodePage codePage)
+        {
+            if (builder == null)
+                throw new ArgumentNullException(nameof(builder));
+
+            return builder.Add(new SetCodePage(codePage));
+        }
+
+        public static PrintableBuilder SetCodePage(this PrintableBuilder builder, byte codePage)
+        {
+            if (builder == null)
+                throw new ArgumentNullException(nameof(builder));
+
+            return builder.Add(new SetCodePage(codePage));
+        }
     }
 }

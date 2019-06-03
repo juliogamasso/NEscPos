@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
+using Vadavo.NEscPos.Helpers;
 
 namespace Vadavo.NEscPos.Printable
 {
@@ -17,7 +19,33 @@ namespace Vadavo.NEscPos.Printable
             _type = type;
         }
 
-        public byte[] GetBytes() => new[] {(byte) Control.GroupSeparator, (byte) 'V', (byte) _type}
-            .Concat(new Feed().GetBytes()).Concat(new Reset().GetBytes()).ToArray();
+        public byte[] GetBytes()
+        {
+            return new[] {(byte) Control.GroupSeparator, (byte) 'V', (byte) _type}
+                .Concat(new Feed().GetBytes())
+                .ToArray();
+        }
+    }
+
+    public static class CutExtensions
+    {
+        /// <summary>
+        /// Cut the paper.
+        /// </summary>
+        public static void Cut(this IPrinter printer, CutType type = CutType.Partial)
+        {
+            if (printer == null)
+                throw new ArgumentNullException(nameof(printer));
+            
+            printer.Print(new Cut(type));
+        }
+
+        public static PrintableBuilder Cut(this PrintableBuilder builder, CutType type = CutType.Partial)
+        {
+            if (builder == null)
+                throw new ArgumentNullException(nameof(builder));
+
+            return builder.Add(new Cut(type));
+        }
     }
 }

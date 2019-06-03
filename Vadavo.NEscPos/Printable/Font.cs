@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using Vadavo.NEscPos.Helpers;
 
 namespace Vadavo.NEscPos.Printable
 {
+    [Flags]
     public enum FontMode
     {
         FontA = 0,
@@ -12,36 +14,62 @@ namespace Vadavo.NEscPos.Printable
         Underline = 128,
     }
 
-    public class Font : IPrintable
+    public class SetFont : IPrintable
     {
-        private FontMode[] _mode;
+        private FontMode _mode;
 
-        public Font(params FontMode[] mode)
+        public SetFont(FontMode mode = FontMode.FontA)
         {
-            if (mode == null)
-            {
-                mode = new[] {FontMode.FontA};
-            }
-
             _mode = mode;
         }
 
-        public Font(FontMode mode = FontMode.FontA)
+        public byte[] GetBytes() =>
+            new[] { (byte) Control.Escape, (byte) '!', (byte) _mode };
+    }
+
+    public static class FontExtensions
+    {
+        public static void SetFont(this IPrinter printer, FontMode fontMode = FontMode.FontA)
         {
-            _mode = new[] {mode};
+            if (printer == null)
+                throw new ArgumentNullException(nameof(printer));
+            
+            printer.Print(new SetFont(fontMode));
         }
 
-        public byte[] GetBytes()
+        public static void SetFontA(this IPrinter printer) => printer.SetFont();
+        public static void SetFontB(this IPrinter printer) => printer.SetFont(FontMode.FontB);
+        public static void SetEmphasizedFont(this IPrinter printer) => printer.SetFont(FontMode.Emphasized);
+        public static void SetDoubleHeightFont(this IPrinter printer) => printer.SetFont(FontMode.DoubleHeight);
+        public static void SetDoubleWidthFont(this IPrinter printer) => printer.SetFont(FontMode.DoubleWidth);
+
+        public static void SetDoubleFont(this IPrinter printer) =>
+            printer.SetFont(FontMode.DoubleWidth | FontMode.DoubleHeight);
+        
+        public static void SetUnderlineFont(this IPrinter printer) => printer.SetFont(FontMode.Underline);
+
+        public static PrintableBuilder SetFont(this PrintableBuilder builder, FontMode fontMode = FontMode.FontA)
         {
-            var bytes = new List<byte>();
+            if (builder == null)
+                throw new ArgumentNullException(nameof(builder));
 
-            foreach (var mode in _mode)
-            {
-                bytes.AddRange(new[] { (byte) Control.Escape, (byte) '!' });
-                bytes.Add((byte) mode);
-            }
-
-            return bytes.ToArray();
+            return builder.Add(new SetFont(fontMode));
         }
+
+        public static PrintableBuilder SetFontA(this PrintableBuilder builder) => builder.SetFont();
+
+        public static PrintableBuilder SetFontB(this PrintableBuilder builder) => builder.SetFont(FontMode.FontB);
+
+        public static PrintableBuilder SetEmphasizedFont(this PrintableBuilder builder) =>
+            builder.SetFont(FontMode.Emphasized);
+
+        public static PrintableBuilder SetDoubleHeightFont(this PrintableBuilder builder) =>
+            builder.SetFont(FontMode.DoubleHeight);
+
+        public static PrintableBuilder SetDoubleWidthFont(this PrintableBuilder builder) =>
+            builder.SetFont(FontMode.DoubleWidth);
+
+        public static PrintableBuilder SetDoubleFont(this PrintableBuilder builder) =>
+            builder.SetFont(FontMode.DoubleWidth | FontMode.DoubleHeight);
     }
 }
